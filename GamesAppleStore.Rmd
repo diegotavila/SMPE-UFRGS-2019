@@ -1,0 +1,114 @@
+---
+title: "GamesAppleStore"
+author: "Diego Toralles Avila"
+date: "30/10/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Introduction
+
+This notebook presents an analysis of the data on 17007 strategy games available on the Apple App Store, such as Clash of CLans, Plants vs Zombies, Pokemon GO and others. This dataset was acquired from Kaggle.com, and it was collected on the 3rd of August 2019 using the iTunes API. 
+
+With this dataset, we may be able to analyze what factors make a sucessful game.
+
+
+# Loading the dataset
+
+To start this analysis, we first load the required packages (tidyverse, readr) and read the csv file provided by Kaggle.
+
+```{r message=FALSE, warning=FALSE}
+if(!require(tidyverse)){install.packages("tidyverse")}
+if(!require(readr)){install.packages("readr")}
+
+appstoreGamesFile = "data/appstore_games.csv"
+appstoreGamesDF = read_csv(appstoreGamesFile) %>% rename_all(~str_replace_all(., "\\s+", ""))
+summary(appstoreGamesDF)
+
+```
+
+As seen by the summary, there are 18 columns in this dataset:
+
+- URL: The URL of the game on the Apple App Store.
+- ID: The assigned ID of the game on the Apple App Store
+- Name: The name of the game.
+- Subtitle: The secondary text under the name
+- Icon URL:  The URL to the App Icon of the game (a 512px x 512px jpg)
+- Average User Rating: Rounded to nearest .5, requires at least 5 ratings
+- User Rating Count: Number of ratings internationally, null means it is below 5
+- Price: Price in USD
+- In-app Purchases: Prices of available in-app purchases
+- Description: App description
+- Developer: App developer
+- Age Rating: Either 4+, 9+, 12+ or 17+
+- Languages: ISO2A language codes
+- Size: Size of the app in bytes
+- Primary Genre: Main genre
+- Genres: Genres of the app
+- Original Release Date: When it was released
+- Current Version Release Date: When it was last updated
+
+
+We need to fix the typing of some columns, such as the release dates.
+
+```{r}
+fixedAppstoreGamesDF <- appstoreGamesDF %>%
+  mutate(OriginalReleaseDate = as.Date(OriginalReleaseDate, "%d/%m/%Y")) %>%
+  mutate(CurrentVersionReleaseDate = as.Date(CurrentVersionReleaseDate, "%d/%m/%Y"))
+  
+appstoreGamesDF <- fixedAppstoreGamesDF
+summary(appstoreGamesDF)
+```
+
+
+# Descriptive Plots
+
+Right now we have no hypotheses to check, but let us create some plots to see the current state of the game released on the app store. 
+
+```{r}
+# appstoreGamesDF %>% select(-URL, -ID, -Subtitle, -IconURL, -Description) %>%
+
+ appstoreGamesDF %>%
+  select(OriginalReleaseDate) %>%
+  mutate(OriginalReleaseYear = format(OriginalReleaseDate, "%Y")) %>%
+  group_by(OriginalReleaseYear) %>%
+  summarise(count = n()) %>%
+    ggplot(aes(x=OriginalReleaseYear, y=count)) +
+    geom_col() +
+    geom_text(aes(label=count), vjust=-0.25) + 
+    theme_minimal()
+```
+
+```{r}
+ appstoreGamesDF %>% select(-URL, -ID, -Subtitle, -IconURL, -Description) %>%
+  select(CurrentVersionReleaseDate) %>%
+  mutate(CurrentVersionRelease = format(CurrentVersionReleaseDate, "%Y")) %>%
+  group_by(CurrentVersionRelease) %>%
+  summarise(count = n()) %>%
+    ggplot(aes(x=CurrentVersionRelease, y=count)) +
+    geom_col() +
+    geom_text(aes(label=count), vjust=-0.25) + 
+    scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
+    theme_minimal()
+```
+
+```{r}
+unique(appstoreGamesDF$AverageUserRating)
+
+ appstoreGamesDF %>%
+  select(AverageUserRating) %>%
+  filter(!is.na(AverageUserRating)) %>%
+  group_by(AverageUserRating) %>%
+  summarise(count = n()) %>%
+    ggplot(aes(x=AverageUserRating, y=count)) +
+    geom_col() +
+    geom_text(aes(label=count), vjust=-0.25) +
+    scale_x_continuous(breaks = seq(1,5,by=0.5)) +
+    scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
+    theme_minimal()
+```
+

@@ -24,6 +24,7 @@ To start this analysis, we first load the required packages (tidyverse, readr) a
 ```{r message=FALSE, warning=FALSE}
 if(!require(tidyverse)){install.packages("tidyverse")}
 if(!require(readr)){install.packages("readr")}
+options(scipen=10000)
 
 appstoreGamesFile = "data/appstore_games.csv"
 appstoreGamesDF = read_csv(appstoreGamesFile) %>% rename_all(~str_replace_all(., "\\s+", ""))
@@ -61,6 +62,7 @@ fixedAppstoreGamesDF <- appstoreGamesDF %>%
   mutate(CurrentVersionReleaseDate = as.Date(CurrentVersionReleaseDate, "%d/%m/%Y"))
   
 appstoreGamesDF <- fixedAppstoreGamesDF
+appstoreGamesDF
 summary(appstoreGamesDF)
 ```
 
@@ -111,4 +113,128 @@ unique(appstoreGamesDF$AverageUserRating)
     scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
     theme_minimal()
 ```
+
+```{r}
+ appstoreGamesDF %>%
+  select(AgeRating) %>% 
+  mutate(AgeRating = factor(AgeRating, levels=c('4+','9+', '12+', '17+'))) %>%
+  arrange(AgeRating) %>%
+  group_by(AgeRating) %>%
+  summarise(count = n()) %>%
+    ggplot(aes(x=AgeRating, y=count)) +
+    geom_col() +
+    geom_text(aes(label=count), vjust=-0.25) + 
+    theme_minimal()
+```
+
+```{r}
+ appstoreGamesDF %>%
+  select(ID, Languages) %>%
+  separate_rows(Languages, sep=",") %>%
+  drop_na(Languages) %>%
+  group_by(Languages) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) %>%
+  top_n(20) %>%
+    ggplot(aes(x=reorder(Languages,desc(count)), y=count)) +
+    geom_col() +
+    geom_text(aes(label=count), vjust=-0.25, size=3.5) +
+    scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
+    theme_minimal()
+```
+
+```{r}
+ appstoreGamesDF %>%
+  select(ID, Genres) %>%
+  separate_rows(Genres, sep=",") %>%
+  drop_na(Genres) %>%
+  group_by(Genres) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) %>%
+  top_n(20) %>%
+    ggplot(aes(x=reorder(Genres,desc(count)), y=count)) +
+    geom_col() +
+    geom_text(aes(label=count), vjust=-0.25, size=3.5) +
+    scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle=90,vjust= 0.2,hjust=1))
+```
+```{r}
+
+  appstoreGamesDF %>%
+  select(Size) %>%
+  filter(!is.na(Size))%>%
+  arrange(Size) %>%
+    ggplot(aes(x=Size)) +
+    geom_histogram(bins=30) +
+    theme_minimal()
+```
+
+
+```{r}
+  appstoreGamesDF %>%
+  select(UserRatingCount) %>%
+  filter(!is.na(UserRatingCount))%>%
+  filter(UserRatingCount>=10000)%>%
+  arrange(UserRatingCount) %>%
+    ggplot(aes(x=UserRatingCount)) +
+    geom_histogram(bins=10) +
+    theme_minimal()
+```
+
+```{r}
+  appstoreGamesDF %>%
+  select(Price) %>%
+  filter(!is.na(Price)) %>%
+  #(Price>00) %>%
+    ggplot(aes(x=Price))+
+    geom_histogram(bins=100)+
+    theme_minimal()
+```
+
+
+
+
+## Questions
+
+
+- Average User Rating: Rounded to nearest .5, requires at least 5 ratings
+- User Rating Count: Number of ratings internationally, null means it is below 5
+- Price: Price in USD
+- In-app Purchases: Prices of available in-app purchases
+- Developer: App developer
+- Age Rating: Either 4+, 9+, 12+ or 17+
+- Languages: ISO2A language codes
+- Size: Size of the app in bytes
+- Primary Genre: Main genre
+- Genres: Genres of the app
+- Original Release Date: When it was released
+- Current Version Release Date: When it was last updated
+
+Unfortunately, there is no information regarding the revenue these games make. We can only speculate that any user that reviews a non-free game has bought it at least once. Thus, we can have model of how much money a game has made compared to others. Of course, this does not consider games with in-app purchases, which is not only the the most common type of game in the Apple Store, but they are also the games that usually make the most amount of money in the mobile gaming community according to the news.
+
+With this crude model, we can relate how most variables impact the revenue of a game: e.g., the amount of languages, a specific language, the genres, the release date, the age rating, the app size, and maybe others.
+
+Is there a correlation between age rating and the languages available.
+Is there a correlation between age rating and genre?
+Is there a correlation between age rating and average user rating?
+Is there a correlation between age rating and user rating count?
+
+Is there a correlation between price and age rating?
+...between price and the presence of In-app Purchases,
+... between price and language?
+... between prices and genre?
+... between price and release date?
+... between price and AppSize?
+
+Is there a correlation between original release date and current version release date?
+... original release date and AppSize.
+... original release date and Genre
+... original release date and Language
+
+
+
+
+
+
 

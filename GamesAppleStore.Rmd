@@ -59,7 +59,8 @@ We need to fix the typing of some columns, such as the release dates.
 ```{r}
 fixedAppstoreGamesDF <- appstoreGamesDF %>%
   mutate(OriginalReleaseDate = as.Date(OriginalReleaseDate, "%d/%m/%Y")) %>%
-  mutate(CurrentVersionReleaseDate = as.Date(CurrentVersionReleaseDate, "%d/%m/%Y"))
+  mutate(CurrentVersionReleaseDate = as.Date(CurrentVersionReleaseDate, "%d/%m/%Y")) %>%
+  mutate(AgeRating = factor(AgeRating, levels=c('4+','9+', '12+', '17+')))
   
 appstoreGamesDF <- fixedAppstoreGamesDF
 appstoreGamesDF
@@ -67,13 +68,13 @@ summary(appstoreGamesDF)
 ```
 
 
-# Descriptive Plots
+# Univariate Plots
 
-Right now we have no hypotheses to check, but let us create some plots to see the current state of the game released on the app store. 
+Right now I have no hypotheses to check, but lets create some plots to see the current state of the games released on the app store. 
+
+First, the number of games released each year. We can see by the plot that the number of games released had been increasing up until 2016. 2017 and 2018 had fewer games released. 2019 is not yet over, so it may catch up to the previous years. 
 
 ```{r}
-# appstoreGamesDF %>% select(-URL, -ID, -Subtitle, -IconURL, -Description) %>%
-
  appstoreGamesDF %>%
   select(OriginalReleaseDate) %>%
   mutate(OriginalReleaseYear = format(OriginalReleaseDate, "%Y")) %>%
@@ -82,6 +83,8 @@ Right now we have no hypotheses to check, but let us create some plots to see th
     ggplot(aes(x=OriginalReleaseYear, y=count)) +
     geom_col() +
     geom_text(aes(label=count), vjust=-0.25) + 
+    ylab("Number of games released") +
+    xlab("Year of Release") +
     theme_minimal()
 ```
 
@@ -117,7 +120,6 @@ unique(appstoreGamesDF$AverageUserRating)
 ```{r}
  appstoreGamesDF %>%
   select(AgeRating) %>% 
-  mutate(AgeRating = factor(AgeRating, levels=c('4+','9+', '12+', '17+'))) %>%
   arrange(AgeRating) %>%
   group_by(AgeRating) %>%
   summarise(count = n()) %>%
@@ -192,7 +194,73 @@ unique(appstoreGamesDF$AverageUserRating)
     theme_minimal()
 ```
 
+## Multivariate plots
 
+### What are the most popular genres by Age Rating?
+
+I removed the "Games", "Entertainment" because they are not game genres. I also removed "Strategy" because the dataset is about games in this genre.
+
+```{r}
+ appstoreGamesDF %>%
+  select(ID,AgeRating, Genres) %>%
+  separate_rows(Genres, sep=",", convert = TRUE) %>%
+  mutate(Genres = trimws(Genres)) %>%
+  filter(Genres != "Strategy" & Genres != "Games" & Genres != "Entertainment") %>%
+  drop_na(Genres) %>%
+  group_by(AgeRating,Genres) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) %>%
+  top_n(n=5) %>%
+  #summarise(averageNumberOfLanguages = mean(numberOfLanguages)) %>%
+    ggplot(aes(x=AgeRating, y=count, fill=Genres)) +
+    geom_col(position = position_dodge(), width=0.9) +
+    #geom_text(aes(label=averageNumberOfLanguages), vjust=-0.25, size=3.5) +
+    scale_fill_brewer(palette="Set1") +
+    scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
+    theme_minimal()
+```
+
+```{r}
+ appstoreGamesDF %>%
+  select(ID,AgeRating, Languages) %>%
+  separate_rows(Languages, sep=",", convert = TRUE) %>%
+  mutate(Languages = trimws(Languages)) %>%
+  # filter(Genres != "Strategy" & Genres != "Games" & Genres != "Entertainment") %>%
+  drop_na(Languages) %>%
+  group_by(AgeRating,Languages) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) %>%
+  top_n(n=7) %>%
+    ggplot(aes(x=AgeRating, y=count, fill=Languages)) +
+    geom_col(position = position_dodge(), width=0.9) +
+    geom_text(aes(label=Languages), vjust=-0.25, size=3.5, position = position_dodge(0.9)) +
+    scale_fill_brewer(palette="Set1") +
+    scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
+    theme_minimal() +
+    theme(legend.position = "none")
+```
+
+English is clearly the most popular language, followed by Chinese (ZH). Since it's not possible to see the difference between the other language columns, lets create the same plot without English and Chinese.
+
+```{r}
+ appstoreGamesDF %>%
+  select(ID,AgeRating, Languages) %>%
+  separate_rows(Languages, sep=",", convert = TRUE) %>%
+  mutate(Languages = trimws(Languages)) %>%
+  filter(Languages != "EN" & Languages != "ZH") %>%
+  drop_na(Languages) %>%
+  group_by(AgeRating,Languages) %>%
+  summarise(count = n()) %>%
+  arrange(desc(count)) %>%
+  top_n(n=7) %>%
+    ggplot(aes(x=AgeRating, y=count, fill=Languages)) +
+    geom_col(position = position_dodge(), width=0.9) +
+    geom_text(aes(label=Languages), vjust=-0.25, size=3.5, position = position_dodge(0.9)) +
+    scale_fill_brewer(palette="Set1") +
+    scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
+    theme_minimal() +
+    theme(legend.position = "none")
+```
 
 
 ## Questions
@@ -216,12 +284,93 @@ Unfortunately, there is no information regarding the revenue these games make. W
 With this crude model, we can relate how most variables impact the revenue of a game: e.g., the amount of languages, a specific language, the genres, the release date, the age rating, the app size, and maybe others.
 
 Is there a correlation between age rating and the languages available.
+
+```{r}
+  # appstoreGamesDF %>%
+  #  select(ID,AgeRating, Languages) %>%
+  #  separate_rows(Languages, sep=",") %>%
+  #  drop_na(Languages) %>%
+  #  group_by(ID,AgeRating) %>%
+  #  summarise(numberOfLanguages = n())
+ #  arrange(desc(numberOfLanguages))
+
+
+ appstoreGamesDF %>%
+  select(ID,AgeRating, Languages) %>%
+  separate_rows(Languages, sep=",") %>%
+  drop_na(Languages) %>%
+  group_by(ID,AgeRating) %>%
+  summarise(numberOfLanguages = n()) %>%
+  #ungroup %>%
+  #group_by(AgeRating) %>%
+  #summarise(averageNumberOfLanguages = mean(numberOfLanguages)) %>%
+    ggplot(aes(x=AgeRating, y=numberOfLanguages)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.3) +
+    #geom_text(aes(label=averageNumberOfLanguages), vjust=-0.25, size=3.5) +
+    scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
+    coord_cartesian(ylim=c(0,90)) +
+    theme_minimal()
+```
+
+
+
 Is there a correlation between age rating and genre?
-Is there a correlation between age rating and average user rating?
+
+```{r}
+ appstoreGamesDF %>%
+  select(ID,AgeRating, Genres) %>%
+  separate_rows(Genres, sep=",") %>%
+  drop_na(Genres) %>%
+  group_by(ID,AgeRating) %>%
+  summarise(numberOfGenres = n()) %>%
+  #summarise(averageNumberOfLanguages = mean(numberOfLanguages)) %>%
+    ggplot(aes(x=AgeRating, y=numberOfGenres)) +
+    geom_boxplot() +
+    geom_jitter(width = 0.3) +
+    #geom_text(aes(label=averageNumberOfLanguages), vjust=-0.25, size=3.5) +
+    scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
+    theme_minimal()
+```
+
+
+
+
+### Is there a correlation between age rating and average user rating?
+
+To compare the User ratings for each Age Rating category,  I summed the total amount of user ratings for each rating level and then calculated the ratio of that amount to the total amount of user ratings. This is displayed in the stacked bar chart below.
+
+```{r}
+appstoreGamesDF %>%
+  drop_na(AverageUserRating) %>%
+  arrange(AverageUserRating) %>%
+  pull(AverageUserRating) %>%
+  unique() -> AverageUserRatingLevels #Get a vector containing all possible user rating levels in sequential order.
+
+appstoreGamesDF %>%
+  select(ID,AgeRating, AverageUserRating) %>%
+  drop_na(AverageUserRating) %>%
+  mutate(AverageUserRating = factor(AverageUserRating, levels = AverageUserRatingLevels)) %>%
+  group_by(AgeRating, AverageUserRating) %>%
+  summarise(count = n()) %>%
+  mutate(freq = count / sum(count)) %>%
+  ggplot(aes(x=reorder(AgeRating,desc(AgeRating)), y=freq, fill=AverageUserRating)) + 
+  geom_col(position = position_stack(reverse = TRUE))  +
+  scale_fill_brewer(palette = "RdYlGn") +
+  geom_text(aes(label=count), size=4 ,position=position_stack(vjust = .5, reverse = TRUE)) + 
+  theme_minimal() +
+  xlab("Age Rating") +
+  ylab("Proportion (%)") +
+  labs(fill="Average\nUser Rating") +
+  coord_flip()
+```
+
+
 Is there a correlation between age rating and user rating count?
 
 Is there a correlation between price and age rating?
 ...between price and the presence of In-app Purchases,
+... between price and user rating count?
 ... between price and language?
 ... between prices and genre?
 ... between price and release date?

@@ -35,24 +35,24 @@ summary(appstoreGamesDF)
 
 As seen by the summary, there are 18 columns in this dataset:
 
-- URL: The URL of the game on the Apple App Store.
-- ID: The assigned ID of the game on the Apple App Store
-- Name: The name of the game.
-- Subtitle: The secondary text under the name
-- Icon URL:  The URL to the App Icon of the game (a 512px x 512px jpg)
-- Average User Rating: Rounded to nearest .5, requires at least 5 ratings
-- User Rating Count: Number of ratings internationally, null means it is below 5
-- Price: Price in USD
-- In-app Purchases: Prices of available in-app purchases
-- Description: App description
-- Developer: App developer
-- Age Rating: Either 4+, 9+, 12+ or 17+
-- Languages: ISO2A language codes
-- Size: Size of the app in bytes
-- Primary Genre: Main genre
-- Genres: Genres of the app
-- Original Release Date: When it was released
-- Current Version Release Date: When it was last updated
+- **URL**: The URL of the game on the Apple App Store.
+- **ID**: The assigned ID of the game on the Apple App Store
+- **Name**: The name of the game.
+- **Subtitle**: The secondary text under the name
+- **Icon URL**:  The URL to the App Icon of the game (a 512px x 512px jpg)
+- **Description**: App description
+- **Developer**: App developer
+- **Average User Rating**: Rounded to nearest .5, requires at least 5 ratings
+- **User Rating Count**: Number of ratings internationally, null means it is below 5
+- **Price**: Price in USD
+- **In-app Purchases**: Prices of available in-app purchases
+- **Age Rating**: Either 4+, 9+, 12+ or 17+
+- **Languages**: ISO2A language codes
+- **Size**: Size of the app in bytes
+- **Primary Genre**: Main genre
+- **Genres**: Genres of the app
+- **Original Release Date**: When it was released
+- **Current Version Release Date**: When it was last updated
 
 
 We need to fix the typing of some columns, such as the release dates.
@@ -64,7 +64,7 @@ fixedAppstoreGamesDF <- appstoreGamesDF %>%
   mutate(AgeRating = factor(AgeRating, levels=c('4+','9+', '12+', '17+')))
   
 appstoreGamesDF <- fixedAppstoreGamesDF
-datatable(appstoreGamesDF %>% select(-URL, -ID, -Subtitle, -IconURL, -Description))
+datatable(appstoreGamesDF %>% select(-URL, -ID, -Subtitle, -IconURL, -Description, -Developer))
 summary(appstoreGamesDF)
 ```
 
@@ -86,8 +86,9 @@ First, the number of games released each year. We can see by the plot that the n
     ggplot(aes(x=OriginalReleaseYear, y=count)) +
     geom_col() +
     geom_text(aes(label=count), vjust=-0.25) + 
+    scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
     ylab("Number of games released") +
-    xlab("Year of Release") +
+    xlab("Release Year") +
     theme_minimal()
 ```
 
@@ -140,6 +141,7 @@ This plot is simple, it shows that games on the appstore tend to target all ages
     ggplot(aes(x=AgeRating, y=count)) +
     geom_col() +
     geom_text(aes(label=count), vjust=-0.25) + 
+    scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
     theme_minimal()
 ```
 ## Number of Games per Language.
@@ -213,8 +215,10 @@ Finally, I also tried to plot a histogram of the number of games per the number 
   filter(UserRatingCount>=10000)%>%
   arrange(UserRatingCount) %>%
     ggplot(aes(x=UserRatingCount)) +
+    scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
     geom_histogram(bins=10) +
-    theme_minimal()
+    theme_minimal() +
+    labs(x="Total Number of User Ratings", y="Number of Games")
 ```
 
 
@@ -242,6 +246,8 @@ I removed the "Games", "Entertainment" because they are not game genres. I also 
     #geom_text(aes(label=averageNumberOfLanguages), vjust=-0.25, size=3.5) +
     scale_fill_brewer(palette="Set1") +
     scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
+    xlab("Age Rating") +
+    ylab("Number of Games") +
     theme_minimal()
 ```
 
@@ -264,6 +270,8 @@ I removed the "Games", "Entertainment" because they are not game genres. I also 
     scale_fill_brewer(palette="Set1") +
     scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
     theme_minimal() +
+    xlab("Age Rating") +
+    ylab("Number of Games") +
     theme(legend.position = "none")
 ```
 
@@ -286,6 +294,8 @@ We know that English is clearly the most popular language, followed by Chinese (
     scale_fill_brewer(palette="Set1") +
     scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
     theme_minimal() +
+    xlab("Age Rating") +
+    ylab("Number of Games") +
     theme(legend.position = "none")
 ```
 
@@ -325,6 +335,8 @@ Unfortunatly it is quite difficult to visualize the distribution between these t
     #geom_text(aes(label=averageNumberOfLanguages), vjust=-0.25, size=3.5) +
     scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
     coord_cartesian(ylim=c(0,90)) +
+    xlab("Age Rating") +
+    ylab("Number of Supported Languages") +
     theme_minimal()
 ```
 
@@ -347,6 +359,8 @@ Similarly to the previous plot, the best way I found to visualize this question 
     geom_jitter(width = 0.3) +
     #geom_text(aes(label=averageNumberOfLanguages), vjust=-0.25, size=3.5) +
     scale_y_continuous(expand = expand_scale(mult=c(0,0.05))) +
+    xlab("Age Rating") +
+    ylab("Total Number of Genres") +
     theme_minimal()
 ```
 
@@ -371,15 +385,117 @@ appstoreGamesDF %>%
   group_by(AgeRating, AverageUserRating) %>%
   summarise(count = n()) %>%
   mutate(freq = count / sum(count)) %>%
-  ggplot(aes(x=reorder(AgeRating,desc(AgeRating)), y=freq, fill=AverageUserRating)) + 
-  geom_col(position = position_stack(reverse = TRUE))  +
-  scale_fill_brewer(palette = "RdYlGn") +
-  geom_text(aes(label=count), size=4 ,position=position_stack(vjust = .5, reverse = TRUE)) + 
-  theme_minimal() +
-  xlab("Age Rating") +
-  ylab("Proportion (%)") +
-  labs(fill="Average\nUser Rating") +
-  coord_flip()
+    ggplot(aes(x=reorder(AgeRating,desc(AgeRating)), y=freq, fill=AverageUserRating)) + 
+    geom_col(position = position_stack(reverse = TRUE))  +
+    scale_fill_brewer(palette = "RdYlGn") +
+    geom_text(aes(label=count), size=4 ,position=position_stack(vjust = .5, reverse = TRUE)) + 
+    theme_minimal() +
+    xlab("Age Rating") +
+    ylab("Proportion (%)") +
+    labs(fill="Average\nUser Rating") +
+    coord_flip()
+```
+# Linear Regressions
+
+There aren't many possible variables to test for linear regression.
+
+
+- **Strings**
+  - **URL**
+  - **Name**
+  - **Subtitle**
+  - **Icon URL**
+  - **Description**
+  - **Developer**:
+- **Categorical Data**
+  - **ID**: Unordered
+  - **Age Rating**: Unordered
+  - **Primary Genre**: Unordered
+  - **Genres**: Multiple Values, Unordered
+  - **Languages**: Multiple Values, Unordered
+  - **Average User Rating**: Ordered
+- **Continuous data**
+  - **User Rating Count**
+  - **Price**
+  - **Size**
+  - **In-app Purchases**: Multiple Values
+  - **Date**
+    - **Original Release Date**
+    - **Current Version Release Date**
+
+Any 88unordered data88 is unsuitable for linear regressions. 88In-app Purchases88 is also not a good varaible to anaylze since it is a list the prices, that can have any number of elements and can have repeated values. 
+
+The most likely candidates for a suitable linear regression are **Price**,  **User Rating Count**, **Average User Rating** and **Size** . Starting with the first two:
+
+## Linear Regression of Price and the Number of User Ratings
+
+A significant linear regression between **User Rating Count** and **Price** was not found. 
+
+```{r fig.height=7}
+reg <- lm(data=appstoreGamesDF %>%  drop_na(Price, UserRatingCount), UserRatingCount~Price)
+par(mfrow=c(2,2))
+plot(reg)
+par(mfrow=c(1,1))
+summary(reg)
+
+appstoreGamesDF %>%
+  drop_na(Price, UserRatingCount) %>%
+  select(Price, UserRatingCount) %>%
+  ggplot(aes(x=Price, y=UserRatingCount))+
+  geom_point() + 
+  geom_smooth(method="lm") +
+  coord_cartesian(ylim = c(-25000,100000)) +
+  theme_minimal()
+
+```
+
+
+
+## Linear Regression of Price and the Average User Rating
+
+A significant linear regression between **Average user Rating** and **Price** was not found. 
+
+
+```{r fig.height=7}
+reg <- lm(data=appstoreGamesDF %>%  drop_na(Price, AverageUserRating), Price~AverageUserRating)
+par(mfrow=c(2,2))
+plot(reg)
+par(mfrow=c(1,1))
+summary(reg)
+
+appstoreGamesDF %>%
+  drop_na(Price, AverageUserRating) %>%
+  select(Price, AverageUserRating) %>%
+  ggplot(aes(x=AverageUserRating, y=Price))+
+  geom_jitter(width=0.15) + 
+  geom_smooth(method="lm") +
+  coord_cartesian(ylim = c(0,60)) +
+  theme_minimal()
+
+```
+
+
+## Linear Regression of Price and the App Size
+
+There is a significant linear regression between the price of a game and its size in bytes. This seems plausible, bigger games may have a higher price due to the effort spent to create all that data. However, most games are free and earn their revenue through In-App Purchases. Alsoo, not-free games usually have standarized pricing. So the regression has a very small slope. 
+bu
+```{r fig.height=7}
+
+reg <- lm(data=appstoreGamesDF %>%  drop_na(Price, Size), Price~Size)
+par(mfrow=c(2,2))
+plot(reg)
+par(mfrow=c(1,1))
+summary(reg)
+
+appstoreGamesDF %>%
+  drop_na(Price, Size) %>%
+  mutate(Size = Size/1000000) %>%
+  select(Price, Size) %>%
+  ggplot(aes(x=Size, y=Price))+
+  geom_point() + 
+  geom_smooth(method="lm") +
+  xlab("Size (MB)") +
+  theme_minimal()
 ```
 
 
@@ -387,20 +503,17 @@ appstoreGamesDF %>%
 
 There were other questions I thought that could have been analyzed/plotted: 
 
-Is there a correlation between age rating and user rating count?
+- Is there a correlation between age rating and user rating count?
 
-Is there a correlation between price and age rating?
-... between price and the presence of In-app Purchases,
-... between price and user rating count?
-... between price and language?
-... between prices and genre?
-... between price and release date?
-... between price and AppSize?
+- Is there a correlation between price and the presence of In-app Purchases,
+  - ... between price and language?
+  - ... between prices and genre?
+  - ... between price and release date?
 
-Is there a correlation between original release date and current version release date?
-... original release date and AppSize.
-... original release date and Genre
-... original release date and Language
+- Is there a correlation between original release date and current version release date?
+  - ... original release date and AppSize.
+  - ... original release date and Genre
+  - ... original release date and Language
 
 
 

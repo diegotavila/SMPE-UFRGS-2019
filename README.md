@@ -1,0 +1,1 @@
+O relatório consta no arquivo [GamesAppleStore.html]
